@@ -2,6 +2,8 @@ from tkinter import *
 from tkinter import messagebox
 from tkinter import filedialog
 from pathlib import Path
+import chardet
+from chardet.universaldetector import UniversalDetector
 HasOpen = False
 #Change Thema
 def Dark():
@@ -26,8 +28,15 @@ def open_file():
     suffix = Path(file_path).suffix
     if file_path:
         if suffix != '.klc':
+            detector = UniversalDetector()
+            with open(file_path, 'rb') as fh:
+                for line in fh:
+                    detector.feed(line)
+                    if detector.done:
+                        break
+                detector.close()
             text_fild.delete('1.0', END)
-            text_fild.insert('1.0', open(file_path,'r', encoding='UTF-8').read())
+            text_fild.insert('1.0', open(file_path,'r', encoding=f"{detector.result['encoding']}").read())
         else:
             text_fild.delete('1.0', END)
             text_fild.insert('1.0', open(file_path, 'r', encoding='UTF-8').read())
@@ -83,5 +92,5 @@ theme.add_command(label = 'Light', command = Light)
 view_menu.add_cascade(label = 'Themes', menu = theme)
 window.config(menu=main_menu)
 
-window.mainloop()sss
+window.mainloop()
 
