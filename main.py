@@ -9,6 +9,7 @@ from PIL.Image import Resampling
 
 HasOpen = False
 images = []
+image_refs = []  # To keep references to images to prevent garbage collection
 
 
 # Change Theme
@@ -31,12 +32,12 @@ def exits():
 
 # Open file
 def open_file():
-    global HasOpen, images
+    global HasOpen, images, image_refs
     file_path = filedialog.askopenfilename(title='Выбор файла',
-                                           filetypes=(('Все файлы', '*.*'),('Текстовые документы (*.txt)', '*.txt'),
+                                           filetypes=(('Все файлы', '*.*'), ('Текстовые документы (*.txt)', '*.txt'),
                                                       ('Специализированные файлы (*.klc)', '*.klc')))
     HasOpen = True
-    filename = (Path(file_path).stem)
+    filename = Path(file_path).stem
     suffix = Path(file_path).suffix
     if file_path:
         if suffix != '.klc':
@@ -47,16 +48,30 @@ def open_file():
                     if detector.done:
                         break
                 detector.close()
+            encoding = detector.result['encoding']
+            if encoding is None:
+                encoding = 'utf-8'  # Default to utf-8 if encoding is not detected
+            try:
+                with open(file_path, 'r', encoding=encoding) as file:
+                    text = file.read()
+            except (UnicodeDecodeError, LookupError):
+                messagebox.showerror("Error", "Unable to decode file with detected encoding.")
+                return
+
             text_field.delete('1.0', END)
-            text_field.insert('1.0', open(file_path, 'r', encoding=f"{detector.result['encoding']}").read())
+            text_field.insert('1.0', text)
         else:
-            with open(file_path, 'rb') as file:
-                data = pickle.load(file)
+            try:
+                with open(file_path, 'rb') as file:
+                    data = pickle.load(file)
                 text_field.delete('1.0', END)
                 text_field.insert('1.0', data['text'])
                 images = data['images']
                 for img_info in images:
                     insert_image(img_info['path'], img_info['index'], from_load=True)
+            except (pickle.UnpicklingError, EOFError, KeyError):
+                messagebox.showerror("Error", "Unable to open .klc file.")
+                return
 
     window.title(f"{filename} - Notes")
 
@@ -73,7 +88,7 @@ def save():
 
 
 def insert_image(path=None, index=None, from_load=False):
-    global images
+    global images, image_refs
 
     if not from_load:
         path = filedialog.askopenfilename(
@@ -88,7 +103,7 @@ def insert_image(path=None, index=None, from_load=False):
             images.append({'path': path, 'index': index})
         text_field.image_create(index, image=img)
         text_field.insert(index, '\n')
-        text_field.image = img  # Keep a reference to avoid garbage collection
+        image_refs.append(img)  # Keep a reference to avoid garbage collection
 
 
 window = Tk()
@@ -118,6 +133,7 @@ text_field.config(yscrollcommand=scroll.set)
 main_menu = Menu(window)
 file_menu = Menu(main_menu, tearoff=0)
 file_menu.add_command(label='Open', command=open_file)
+file_menu.add_command(label='Insert Image', command=insert_image)
 file_menu.add_command(label='Save', command=save)
 file_menu.add_command(label='Close', command=exits)
 main_menu.add_cascade(label='File', menu=file_menu)
@@ -129,9 +145,5 @@ theme.add_command(label='Dark', command=Dark)
 theme.add_command(label='Light', command=Light)
 view_menu.add_cascade(label='Themes', menu=theme)
 window.config(menu=main_menu)
-
-# Add Insert Image button
-insert_image_button = Button(window, text="Insert Image", command=insert_image)
-insert_image_button.pack()
 
 window.mainloop()
