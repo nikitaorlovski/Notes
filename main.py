@@ -8,6 +8,7 @@ from PIL import Image, ImageTk
 from PIL.Image import Resampling
 
 HasOpen = False
+current_file_path = None
 images = []
 image_refs = []  # To keep references to images to prevent garbage collection
 
@@ -32,11 +33,12 @@ def exits():
 
 # Open file
 def open_file():
-    global HasOpen, images, image_refs
+    global HasOpen, images, image_refs, current_file_path
     file_path = filedialog.askopenfilename(title='Выбор файла',
                                            filetypes=(('Все файлы', '*.*'), ('Текстовые документы (*.txt)', '*.txt'),
                                                       ('Специализированные файлы (*.klc)', '*.klc')))
     HasOpen = True
+    current_file_path = file_path
     filename = Path(file_path).stem
     suffix = Path(file_path).suffix
     if file_path:
@@ -77,14 +79,28 @@ def open_file():
 
 
 def save():
-    if HasOpen:
-        save_path = filedialog.asksaveasfilename(defaultextension=".klc",
-                                                 filetypes=(("KLC files", "*.klc"), ("All files", "*.*")))
-        if save_path:
-            text = text_field.get("1.0", END)
-            data = {'text': text, 'images': images}
-            with open(save_path, 'wb') as file:
-                pickle.dump(data, file)
+    global current_file_path
+    if HasOpen and current_file_path:
+        text = text_field.get("1.0", END)
+        data = {'text': text, 'images': images}
+        with open(current_file_path, 'wb') as file:
+            pickle.dump(data, file)
+        window.title(f"{Path(current_file_path).stem} - Notes")
+    else:
+        save_as()
+
+
+def save_as():
+    global current_file_path
+    save_path = filedialog.asksaveasfilename(defaultextension=".klc",
+                                             filetypes=(("KLC files", "*.klc"), ("All files", "*.*")))
+    if save_path:
+        text = text_field.get("1.0", END)
+        data = {'text': text, 'images': images}
+        with open(save_path, 'wb') as file:
+            pickle.dump(data, file)
+        current_file_path = save_path
+        window.title(f"{Path(save_path).stem} - Notes")
 
 
 def insert_image(path=None, index=None, from_load=False):
@@ -104,6 +120,10 @@ def insert_image(path=None, index=None, from_load=False):
         text_field.image_create(index, image=img)
         text_field.insert(index, '\n')
         image_refs.append(img)  # Keep a reference to avoid garbage collection
+
+
+def save_shortcut(event=None):
+    save()
 
 
 window = Tk()
@@ -135,6 +155,7 @@ file_menu = Menu(main_menu, tearoff=0)
 file_menu.add_command(label='Open', command=open_file)
 file_menu.add_command(label='Insert Image', command=insert_image)
 file_menu.add_command(label='Save', command=save)
+file_menu.add_command(label='Save As...', command=save_as)
 file_menu.add_command(label='Close', command=exits)
 main_menu.add_cascade(label='File', menu=file_menu)
 view_menu = Menu(main_menu, tearoff=0)
@@ -145,5 +166,7 @@ theme.add_command(label='Dark', command=Dark)
 theme.add_command(label='Light', command=Light)
 view_menu.add_cascade(label='Themes', menu=theme)
 window.config(menu=main_menu)
+
+window.bind('<Control-s>', save_shortcut)
 
 window.mainloop()
