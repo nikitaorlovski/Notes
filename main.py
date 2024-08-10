@@ -4,7 +4,7 @@ from pathlib import Path
 import chardet
 from chardet.universaldetector import UniversalDetector
 import pickle
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageGrab
 from PIL.Image import Resampling
 import base64
 
@@ -93,6 +93,7 @@ def open_file():
     window.title(f"{filename} - Notes")
 
 
+#save in klc
 def save():
     global current_file_path
     if HasOpen and current_file_path:
@@ -139,6 +140,29 @@ def insert_image(path=None, index=None, from_load=False):
 
 def save_shortcut(event=None):
     save()
+
+
+def insert_image_from_clipboard(event=None):
+    try:
+        img = ImageGrab.grabclipboard()
+        if isinstance(img, Image.Image):
+            index = text_field.index(INSERT)
+            img = img.resize((200, 200), Resampling.LANCZOS)  # Resize image
+            img_tk = ImageTk.PhotoImage(img)
+            images.append({'path': None, 'index': index})  # path=None так как изображение вставлено из буфера
+            text_field.image_create(index, image=img_tk)
+            text_field.insert(index, '\n')
+            image_refs.append(img_tk)  # Keep a reference to avoid garbage collection
+        elif img is None:
+            # Если в буфере обмена нет изображения, ничего не делаем
+            pass
+        else:
+            # Вставка другого содержимого (например, текста)
+            # Просто игнорируем вызов функции, так как tkinter сам обработает вставку текста
+            pass
+    except Exception as e:
+        # Если произошла какая-либо другая ошибка, выводим сообщение
+        messagebox.showerror("Ошибка", f"Произошла ошибка при вставке изображения: {e}")
 
 
 # Base64 encoded icon
@@ -202,6 +226,7 @@ view_menu.add_cascade(label='Themes', menu=theme)
 window.config(menu=main_menu)
 
 window.bind('<Control-s>', save_shortcut)
+window.bind('<Control-v>', lambda event: insert_image_from_clipboard())
 
 window.mainloop()
 
