@@ -12,7 +12,6 @@ HasOpen = False
 images = []
 image_refs = []  # To keep references to images to prevent garbage collection
 
-
 # Change Theme
 def Dark():
     Theme = {'bg': 'gray', 'fg': 'white'}
@@ -22,6 +21,22 @@ def Dark():
 def Light():
     Theme = {'bg': 'white', 'fg': 'black'}
     text_field.configure(bg=Theme['bg'], fg=Theme['fg'])
+
+
+#Change Font
+def arial():
+    font = {'font':'Arial 14 bold'}
+    text_field['font']= font['font']
+
+
+def csms():
+    font = {'font': ('Comic Sans MS', 14, 'bold')}
+    text_field['font']= font['font']
+
+
+def tnr():
+    font = {'font': ('Times New Roman', 14, 'bold')}
+    text_field['font']= font['font']
 
 
 # Function to exit
@@ -175,6 +190,11 @@ main_menu.add_cascade(label='File', menu=file_menu)
 view_menu = Menu(main_menu, tearoff=0)
 
 main_menu.add_cascade(label='View', menu=view_menu)
+fonts = Menu(view_menu, tearoff=0)
+fonts.add_command(label='Arial', command=arial)
+fonts.add_command(label='CSMS', command=csms)
+fonts.add_command(label='TNR', command=tnr)
+view_menu.add_cascade(label='Font',menu=fonts)
 theme = Menu(view_menu, tearoff=0)
 theme.add_command(label='Dark', command=Dark)
 theme.add_command(label='Light', command=Light)
